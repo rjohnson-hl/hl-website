@@ -1,5 +1,5 @@
 /*!
- * hl-effects v1.0.1
+ * hl-effects v1.0.2
  * Small, no-build scroll and text effects.
  * https://github.com/rjohnson-hl/hl-website
  *
@@ -7,16 +7,18 @@
  * The host page must provide both. Do NOT load GSAP again from a CDN -- a
  * second copy overwrites the first, and you silently end up running whichever
  * version happens to load last.
+ *
+ * No build step: this is served as-is. Modern syntax is fine -- the effect
+ * already requires evergreen browsers (CSS custom properties, :scope,
+ * Promises, background-clip: text), so there is nothing older to support.
  */
-(function () {
+(() => {
   "use strict";
 
-  var NS = "[hl-effects]";
-  var reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const NS = "[hl-effects]";
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  function warn(message, el) {
-    console.warn(NS + " " + message, el || "");
-  }
+  const warn = (message, el) => console.warn(`${NS} ${message}`, el || "");
 
   /* ------------------------------------------------------------------
    * splitWords(el)
@@ -35,29 +37,25 @@
     }
 
     if (el.children.length) {
-      warn(
-        'skipped: contains inline markup (<' +
-          el.children[0].tagName.toLowerCase() +
-          '>). Word-splitting would destroy it.',
-        el
-      );
+      const tag = el.children[0].tagName.toLowerCase();
+      warn(`skipped: contains inline markup (<${tag}>). Word-splitting would destroy it.`, el);
       return null;
     }
 
-    var words = el.textContent.trim().split(/\s+/).filter(Boolean);
+    const words = el.textContent.trim().split(/\s+/).filter(Boolean);
     if (!words.length) return null;
 
-    var frag = document.createDocumentFragment();
-    words.forEach(function (word, i) {
-      if (i) frag.appendChild(document.createTextNode(" "));
-      var span = document.createElement("span");
+    const frag = document.createDocumentFragment();
+    for (const [i, word] of words.entries()) {
+      if (i) frag.append(" ");
+      const span = document.createElement("span");
       span.className = "word";
       span.textContent = word; // textContent, never innerHTML
-      frag.appendChild(span);
-    });
+      frag.append(span);
+    }
 
     el.textContent = "";
-    el.appendChild(frag);
+    el.append(frag);
     el.dataset.hlSplit = "true";
     return el.querySelectorAll(":scope > .word");
   }
@@ -73,22 +71,20 @@
    * Must re-run on anything that reflows the block: resize, webfont swap.
    * ---------------------------------------------------------------- */
   function syncWordGradient(block) {
-    var b = block.getBoundingClientRect();
+    const b = block.getBoundingClientRect();
     if (!b.width) return; // hidden, display:none, or not laid out yet
 
-    var words = block.querySelectorAll(":scope > .word");
+    const words = [...block.querySelectorAll(":scope > .word")];
     if (!words.length) return;
 
     // Read every rect first, then write. Keeps this to one layout pass.
-    var rects = Array.prototype.map.call(words, function (w) {
-      return w.getBoundingClientRect();
-    });
+    const rects = words.map((w) => w.getBoundingClientRect());
+    const size = `${b.width}px ${b.height}px`;
 
-    var size = b.width + "px " + b.height + "px";
-    words.forEach(function (w, i) {
+    words.forEach((w, i) => {
       w.style.backgroundSize = size;
       w.style.backgroundPosition =
-        -(rects[i].left - b.left) + "px " + -(rects[i].top - b.top) + "px";
+        `${-(rects[i].left - b.left)}px ${-(rects[i].top - b.top)}px`;
     });
   }
 
@@ -98,7 +94,7 @@
    * Keyed by the value used in data-effect. Each receives the element and
    * may return a resync function, which runs on resize and font load.
    * ---------------------------------------------------------------- */
-  var effects = {
+  const effects = {
     /*
      * scrub-words -- reveals a heading word by word as it scrolls into view.
      * Unrevealed words are completely invisible, not dimmed.
@@ -110,15 +106,12 @@
      *   data-start    ScrollTrigger start            default "top 90%"
      *   data-end      ScrollTrigger end              default "top center"
      */
-    "scrub-words": function (el) {
-      var words = splitWords(el);
-      if (!words || !words.length) return;
+    "scrub-words"(el) {
+      const words = splitWords(el);
+      if (!words?.length) return;
 
       syncWordGradient(el);
-
-      var resync = function () {
-        syncWordGradient(el);
-      };
+      const resync = () => syncWordGradient(el);
 
       if (reducedMotion) {
         window.gsap.set(words, { opacity: 1 });
@@ -148,25 +141,22 @@
   /* ------------------------------------------------------------------
    * Wiring
    * ---------------------------------------------------------------- */
-  var resyncers = [];
+  const resyncers = [];
 
-  function init(root) {
-    root = root || document;
-    Object.keys(effects).forEach(function (name) {
-      root.querySelectorAll('[data-effect~="' + name + '"]').forEach(function (el) {
-        if (el.dataset.hlInit === "true") return; // idempotent
+  function init(root = document) {
+    for (const [name, effect] of Object.entries(effects)) {
+      for (const el of root.querySelectorAll(`[data-effect~="${name}"]`)) {
+        if (el.dataset.hlInit === "true") continue; // idempotent
         el.dataset.hlInit = "true";
-        var resync = effects[name](el);
+        const resync = effect(el);
         if (typeof resync === "function") resyncers.push(resync);
-      });
-    });
+      }
+    }
   }
 
   function resync() {
-    resyncers.forEach(function (fn) {
-      fn();
-    });
-    if (window.ScrollTrigger) window.ScrollTrigger.refresh();
+    for (const fn of resyncers) fn();
+    window.ScrollTrigger?.refresh();
   }
 
   function boot() {
@@ -183,12 +173,10 @@
     resync();
 
     // Webfonts change metrics after first layout, which moves every word.
-    if (document.fonts && document.fonts.ready) {
-      document.fonts.ready.then(resync);
-    }
+    document.fonts?.ready?.then(resync);
 
-    var timer;
-    window.addEventListener("resize", function () {
+    let timer;
+    window.addEventListener("resize", () => {
       clearTimeout(timer);
       timer = setTimeout(resync, 150);
     });
@@ -196,12 +184,7 @@
 
   // Exposed for debugging, and so a page can register an effect or re-init
   // after injecting content, without editing this file.
-  window.hlEffects = {
-    init: init,
-    resync: resync,
-    effects: effects,
-    splitWords: splitWords
-  };
+  window.hlEffects = { init, resync, effects, splitWords };
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", boot);
