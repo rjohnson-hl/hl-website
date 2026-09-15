@@ -1,0 +1,7 @@
+node_modules/
+.DS_Store
+Thumbs.db
+
+# Working context — site-specific, deployment, and security detail.
+# Deliberately untracked. See CLAUDE.md.
+CLAUDE.md

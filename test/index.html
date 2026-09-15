@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hl-effects — local harness</title>
+
+<!-- Pinned GSAP, local harness only. In production the host page provides
+     these and you must NOT add them. -->
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/ScrollTrigger.min.js"></script>
+
+<link rel="stylesheet" href="../effects.css">
+
+<style>
+  :root { --bg: #09151e; --ink: #fff; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Helvetica Neue", Arial, sans-serif;
+  }
+  .spacer { height: 100vh; display: grid; place-items: center; opacity: .35; }
+  .section { background: var(--bg); padding: 12vh 5vw; }
+  h2 {
+    font-size: clamp(2rem, 5vw, 4rem);
+    line-height: 1.4;
+    text-align: center;
+    font-weight: 400;
+    margin: 0 auto;
+    max-width: 1160px;
+  }
+  .hud {
+    position: fixed; top: 12px; left: 12px; z-index: 10;
+    font: 12px/1.6 ui-monospace, Menlo, Consolas, monospace;
+    background: #000c; border: 1px solid #ffffff22; border-radius: 6px;
+    padding: 8px 10px; white-space: pre;
+  }
+</style>
+</head>
+<body>
+
+<div class="hud" id="hud">booting…</div>
+
+<div class="spacer">scroll down ↓</div>
+
+<section class="section">
+  <h2 data-effect="scrub-words">
+    This heading reveals one word at a time as it scrolls into view, with the gradient running continuously across every line rather than restarting on each word.
+  </h2>
+</section>
+
+<div class="spacer">— second heading, faster stagger —</div>
+
+<section class="section">
+  <h2 data-effect="scrub-words" data-stagger="0.06" data-end="bottom center">
+    Tuned per element with data-stagger and data-end, no code change required.
+  </h2>
+</section>
+
+<div class="spacer">— guard rail: inline markup —</div>
+
+<section class="section">
+  <!-- Should be SKIPPED with a console warning, and render as normal text.
+       Proves the splitter refuses to eat markup instead of silently doing it. -->
+  <h2 data-effect="scrub-words">
+    This heading contains <em>inline markup</em> and must be left alone.
+  </h2>
+</section>
+
+<div class="spacer">end</div>
+
+<script src="../effects.js"></script>
+<script>
+  // Tiny HUD so you can see trigger progress while scrolling.
+  addEventListener("load", function () {
+    var hud = document.getElementById("hud");
+    function paint() {
+      var lines = ["gsap " + (window.gsap ? gsap.version : "MISSING")];
+      (window.ScrollTrigger ? ScrollTrigger.getAll() : []).forEach(function (st, i) {
+        lines.push("trigger " + i + "  progress " + st.progress.toFixed(2));
+      });
+      var split = document.querySelectorAll('[data-hl-split="true"]').length;
+      var words = document.querySelectorAll(".word").length;
+      lines.push("split blocks " + split + "   words " + words);
+      hud.textContent = lines.join("\n");
+      requestAnimationFrame(paint);
+    }
+    paint();
+  });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hl-effects — published (jsDelivr) smoke test</title>
+
+<!-- Release smoke test. Loads the PUBLISHED files, not the local ones, so it
+     exercises exactly what the host page will get. Bump the tag after release. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rjohnson-hl/hl-website@v1.0.1/effects.css">
+
+<!-- In production the host page provides GSAP. Pinned here to match. -->
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/ScrollTrigger.min.js"></script>
+
+<style>
+  :root { --bg: #09151e; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: #fff;
+         font-family: "Helvetica Neue", Arial, sans-serif; }
+  .spacer { height: 100vh; display: grid; place-items: center; opacity: .35; }
+  .section { background: var(--bg); padding: 12vh 5vw; }
+  h2 { font-size: clamp(2rem, 5vw, 4rem); line-height: 1.4; text-align: center;
+       font-weight: 400; margin: 0 auto; max-width: 1160px; }
+  .hud { position: fixed; top: 12px; left: 12px; z-index: 10;
+         font: 12px/1.6 ui-monospace, Menlo, Consolas, monospace;
+         background: #000c; border: 1px solid #ffffff22; border-radius: 6px;
+         padding: 8px 10px; white-space: pre; }
+</style>
+</head>
+<body>
+
+<div class="hud" id="hud">booting…</div>
+<div class="spacer">published build — scroll down ↓</div>
+
+<section class="section">
+  <h2 data-effect="scrub-words">
+    This heading reveals one word at a time as it scrolls into view, with the gradient running continuously across every line rather than restarting on each word.
+  </h2>
+</section>
+
+<div class="spacer">end</div>
+
+<script defer src="https://cdn.jsdelivr.net/gh/rjohnson-hl/hl-website@v1.0.1/effects.js"></script>
+<script>
+  addEventListener("load", function () {
+    var hud = document.getElementById("hud");
+    function paint() {
+      var lines = [
+        "gsap        " + (window.gsap ? gsap.version : "MISSING"),
+        "hlEffects   " + (window.hlEffects ? "loaded from CDN" : "MISSING"),
+        "words       " + document.querySelectorAll(".word").length
+      ];
+      (window.ScrollTrigger ? ScrollTrigger.getAll() : []).forEach(function (st, i) {
+        lines.push("progress    " + st.progress.toFixed(2));
+      });
+      hud.textContent = lines.join("\n");
+      requestAnimationFrame(paint);
+    }
+    paint();
+  });
+</script>
+
+</body>
+</html>

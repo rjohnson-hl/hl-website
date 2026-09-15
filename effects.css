@@ -1,0 +1,52 @@
+/*!
+ * hl-effects v1.0.1
+ * https://github.com/rjohnson-hl/hl-website
+ *
+ * Load this in the host page's <head>.
+ * It must arrive before first paint. If it loads late, unrevealed words
+ * flash on screen before the script hides them.
+ */
+
+/* --------------------------------------------------------------------
+ * scrub-words
+ *
+ * The gradient must NOT live on the heading itself. `background-clip: text`
+ * on a parent paints its gradient through EVERY descendant glyph, including
+ * words that are meant to be hidden -- and a child's `opacity` has no say in
+ * it, because the clip region is geometric. That was the original bug this
+ * replaced. Each word owns its own gradient instead, so `opacity: 0` paints
+ * nothing at all.
+ * ------------------------------------------------------------------ */
+
+[data-effect~="scrub-words"] {
+  background-image: none;
+}
+
+[data-effect~="scrub-words"] .word {
+  display: inline-block;
+  opacity: 0;
+
+  /* paint this word's own gradient through its glyphs */
+  -webkit-text-fill-color: transparent;
+  -webkit-background-clip: text;
+          background-clip: text;
+  background-repeat: no-repeat;
+  background-image: var(
+    --hl-word-gradient,
+    linear-gradient(90deg, #42e996, #d0ffef 65%, #f6fffc 102%)
+  );
+
+  /* background-size and background-position are set per word by effects.js,
+     which maps each word onto the heading's box so the gradient reads as
+     one continuous sweep rather than restarting on every word. */
+}
+
+/* Nothing above hides the heading itself -- only `.word`, which does not
+   exist until the script has run. If effects.js is blocked or throws, the
+   heading renders as ordinary visible text. Keep it that way. */
+
+@media (prefers-reduced-motion: reduce) {
+  [data-effect~="scrub-words"] .word {
+    opacity: 1;
+  }
+}
